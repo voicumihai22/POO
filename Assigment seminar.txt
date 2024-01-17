@@ -1,0 +1,89 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+using namespace std;
+
+class Person {
+public:
+    Person() : name(nullptr), pap(nullptr), age(0) {}
+    Person(const string& n, int a, const string& info) : age(a) {
+        name = new char[n.size() + 1];
+        strcpy_s(name, n.size() + 1, n.c_str());
+
+        pap = new char[info.size() + 1];
+        strcpy_s(pap, info.size() + 1, info.c_str());
+    }
+    // Destructor pentru a elibera memoria alocata dinamic
+    ~Person() {
+        delete[] name;
+        delete[] pap;
+    }
+    // Funcție de serializare
+    void Serialize(ofstream& ofs) const {
+        size_t nameLength = strlen(name) + 1;
+        ofs.write(reinterpret_cast<const char*>(&nameLength), sizeof(nameLength));
+        ofs.write(name, nameLength);
+   // Funcție de deserializare
+        size_t papLength = strlen(pap) + 1;
+        ofs.write(reinterpret_cast<const char*>(&papLength), sizeof(papLength));
+        ofs.write(pap, papLength);
+
+        ofs.write(reinterpret_cast<const char*>(&age), sizeof(age));
+    }
+
+    void Deserialize(ifstream& ifs) {
+        size_t nameLength, papLength;
+        ifs.read(reinterpret_cast<char*>(&nameLength), sizeof(nameLength));
+        delete[] name;
+        name = new char[nameLength];
+        ifs.read(name, nameLength);
+
+        ifs.read(reinterpret_cast<char*>(&papLength), sizeof(papLength));
+        delete[] pap;
+        pap = new char[papLength];
+        ifs.read(pap, papLength);
+
+        ifs.read(reinterpret_cast<char*>(&age), sizeof(age));
+    }
+
+    void DisplayInfo() const {
+        cout << "Name: " << name << ", Pap: " << pap << ", Age: " << age << endl;
+    }
+
+private:
+    char* name;
+    char* pap;
+    int age;
+};
+
+int main() {
+    {
+        // Salvare obiect într-un fișier binar
+        ofstream outputFile("person.dat", ios::binary);
+        if (!outputFile) {
+            cerr << "Error opening file for writing." << endl;
+            return 1;
+        }
+
+        Person personToSave("John Doe", 25, " Pap");
+        personToSave.Serialize(outputFile);
+
+        cout << "Object saved successfully." << endl;
+    }
+    // Restaurare obiect din fișier binar
+    {
+        ifstream inputFile("person.dat", ios::binary);
+        if (!inputFile) {
+            cerr << "Error opening file for reading." << endl;
+            return 1;
+        }
+
+        Person restoredPerson;
+        restoredPerson.Deserialize(inputFile);
+
+        cout << "Object restored successfully." << endl;
+        restoredPerson.DisplayInfo();
+    }
+
+    return 0;
+}
